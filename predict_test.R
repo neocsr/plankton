@@ -7,7 +7,7 @@ dummies <- data.frame(image = dummy, prediction = factor(categories))
 
 testCases <- read.csv("test_cases.csv", header = TRUE, stringsAsFactors = FALSE)
 
-prediction <- predict(fit3, newdata = testCases, type = "prob")
+prediction <- predict(fit4, newdata = testCases, type = "prob")
 testCases$prediction <- prediction
 
 summary <- rbind(testCases[, c("image", "prediction")], dummies)

@@ -1,3 +1,4 @@
 .DS_Store
 competition_data/test/
 competition_data/train/
+.Rhistory
