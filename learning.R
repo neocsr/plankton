@@ -1,10 +1,13 @@
-library(caret)
 library(ggplot2)
+library(dplyr)
+library(caret)
+library(randomForest)
 library(doMC)
 
-registerDoMC(cores = 2)
-setwd("~/Projects/kaggle/National Data Science Bowl")
-plankton <- read.csv("plankton.csv", header = TRUE, stringsAsFactors = TRUE)
+registerDoMC(cores = 4)
+setwd("~/Projects/kaggle/plankton")
+p <- read.csv("plankton_train_48.csv", header = TRUE, stringsAsFactors = TRUE)
+plankton <- tbl_df(p[-c(1, 2, 3)])
 
 set.seed(123)
 inTrain <- createDataPartition(plankton$y, p = 0.75, list = FALSE)
@@ -16,16 +19,20 @@ tc <- trainControl(method = "cv", number = 3, allowParallel = TRUE)
 startTime <- proc.time()
 fit <- train(y ~ ., data = training, method = "rf", trControl = tc, prox = FALSE)
 duration <- proc.time() - startTime
+duration
 #      user    system   elapsed
 # 30648.801   240.166 23252.554
 
-prediction <- predict(fit, newdata = testing)
+prediction <- predict(fit, newdata = testing, type = "prob")
 confMat <- confusionMatrix(testing$y, prediction)
 confMat$overall
 confMat$byClass
 confMat$byClass["Class: stomatopod", ]
 confMat$byClass[confMat$byClass[, "Balanced Accuracy"] < 0.5 & !is.na(confMat$byClass[, "Balanced Accuracy"]), ]
 misclassified <- confMat$byClass[confMat$byClass[, "Balanced Accuracy"] < 0.5 & !is.na(confMat$byClass[, "Balanced Accuracy"]), ]
+
+prediction[1, prediction[1,] > max(prediction[1, ]) - max(prediction[1, ])/2]
+prediction[3, prediction[3,] > max(prediction[3, ]) - max(prediction[3, ])/2]
 
 # Overall Statistics
 
@@ -42,7 +49,7 @@ predict(fit, testCases)
 startTime2 <- proc.time()
 fit2 <- train(y ~ s.area + s.perimeter + s.radius.mean + s.radius.sd + s.radius.min + s.radius.max + m.cx + m.cy + m.majoraxis + m.eccentricity + m.theta, data = training, method = "rf", trControl = tc, prox = FALSE)
 duration2 <- proc.time() - startTime2
-prediction2 <- predict(fit, newdata = testing)
+prediction2 <- predict(fit2, newdata = testing, type = "prob")
 confMat2 <- confusionMatrix(testing$y, prediction2)
 confMat2$byClass[confMat2$byClass[, "Balanced Accuracy"] < 0.5 & !is.na(confMat2$byClass[, "Balanced Accuracy"]), ]
 misclassified2 <- confMat2$byClass[confMat2$byClass[, "Balanced Accuracy"] < 0.5 & !is.na(confMat2$byClass[, "Balanced Accuracy"]), ]
@@ -57,16 +64,20 @@ misclassified2 <- confMat2$byClass[confMat2$byClass[, "Balanced Accuracy"] < 0.5
 #                   Kappa : 0.4253
 #  Mcnemar's Test P-Value : NA
 
-save(fit4, file = "fit_04.RData")
-load("fit_02.RData")
+save(fit4, file = "fit_48.RData")
+load("fit_04.RData")
 
 # Using Random Forest
 library(randomForest)
 
 startTime <- proc.time()
 # fit3 <- randomForest(y ~ s.area + s.perimeter + s.radius.mean + s.radius.sd + s.radius.min + s.radius.max + m.cx + m.cy + m.majoraxis + m.eccentricity + m.theta, data = training)
-fit4 <- randomForest(y ~ ., data = training)
+# fit4 <- randomForest(y ~ ., data = training)
+fit4 <- randomForest(y ~ ., data = training[-c(1, 2, 3)])
 duration <- proc.time() - startTime
+duration
+
+prediction2 <- predict(fit4, newdata = testing, type = "prob")
 
 importance(fit4)
 table(fit4$predicted == training$y)
